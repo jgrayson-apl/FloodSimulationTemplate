@@ -28,7 +28,7 @@ Update the parameters in ./config/application.json file in your favorite json ed
 |  **shareable** | List of shareable properties                                      |
 
 
-#### Web Map with Flood Simulation results
+### Web Map with Flood Simulation results
 This demo web application expects the configured Web Map to be organized in the following manner:
 
 ![web map layer config](/assets/WebMapLayerConfig.png)
