@@ -29,7 +29,7 @@ Update the parameters in ./config/application.json file in your favorite json ed
 
 
 ### Web Map Layers Configuration
-This demo web application expects the configured Web Map to be organized in the following manner:
+This application expects the layers to be configured and organized in the Web Map as shown below.  If you organize and name the layers in this manner, then there is no need to modify any code.
 
 ![web map layer config](/assets/WebMapLayerConfig.png)
 
