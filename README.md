@@ -29,7 +29,9 @@ Update the parameters in ./config/application.json file in your favorite json ed
 
 
 ### Web Map Layers Configuration
-This application expects the layers to be configured and organized in the Web Map as shown below.  If you organize and name the layers in this manner, then there is no need to modify any code.  The only exception is the layer called 'Stanwood Mitigation' which represents a visual representation of the barriers and is optional; the absence or different name for this layer will not affect the application code. 
+This application expects the layers to be configured and organized in the Web Map as shown below.  If you organize and name the layers in this manner, then there is no need to modify any code.  
+
+> NOTE: the only exception is the layer called 'Stanwood Mitigation' which represents a visual representation of the barriers and is optional; the absence or different name for this layer will not affect the application code. 
 
 ![web map layer config](/assets/WebMapLayerConfig.png)
 
