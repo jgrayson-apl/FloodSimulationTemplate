@@ -13,6 +13,8 @@
   "viewProps": {
     "alphaCompositingEnabled": true
   },
+  "depthVariableName": "B1",
+  "timeDimensionName": "StdTime",
   "depthUnit": {
     "name": "meters",
     "label": "m"

@@ -26,6 +26,9 @@ Update the parameters in ./config/application.json file in your favorite json ed
 |   **webscene** | The item id of the web scene                                      |
 |  **viewProps** | Additional view properties.                                       | 
 |  **shareable** | List of shareable properties                                      |
+|  **depthVariableName** | Multidimensional Variable                                 |
+|  **timeDimensionName** | Multidimensional Time Dimension                           |
+|  **depthUnit** | the name and label for the Detph variable                         |
 
 
 ### Web Map Layers Configuration

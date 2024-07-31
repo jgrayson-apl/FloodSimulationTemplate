@@ -205,8 +205,10 @@ class Application extends AppBase {
 
         const analysisLayers = {expectedLayer, mitigationLayer, flowLayerExpected, depthLayerExpected, flowLayerMitigation, depthLayerMitigation};
 
-        const {serviceRasterInfo} = depthLayerExpected;
+        const {serviceRasterInfo, type} = depthLayerExpected;
         this.dates = serviceRasterInfo.multidimensionalInfo.variables.at(0).dimensions.at(0).values.map(val => new Date(val));
+
+        this.imageryLayerType = type;
 
         resolve({analysisLayers, dates: this.dates});
       });
@@ -397,32 +399,32 @@ class Application extends AppBase {
       depthChart.update();
     };
 
-    this.updateChart = ({expectedValues, mitigationValues}) => {
+    this.updateChartByValues = ({expectedValues, mitigationValues}) => {
       depthChart.data.datasets.at(0).data = dataValuesToChartData(expectedValues);
       depthChart.data.datasets.at(1).data = dataValuesToChartData(mitigationValues);
       depthChart.update();
     };
-
-    /*this.updateChart = ({dataSeriesExpected, dataSeriesMitigation}) => {
-     depthChart.data.datasets.at(0).data = dataSeriesToChartData(dataSeriesExpected);
-     depthChart.data.datasets.at(1).data = dataSeriesToChartData(dataSeriesMitigation);
-     depthChart.update();
-     };*/
-
-    /*const dataSeriesToChartData = (dataSeries) => {
-     return dataSeries.map(({multidimensionalDefinition, value}) => {
-     return {
-     time: minuteFormatter.format(new Date(multidimensionalDefinition.at(0).values.at(0))).replace(/AM|PM/g, '').trim(),
-     depth: value.at(0)
-     };
-     });
-     };*/
 
     const dataValuesToChartData = (dataValues) => {
       return dataValues.map((value, valueIdx) => {
         return {
           time: minuteFormatter.format(this.dates.at(valueIdx)).replace(/AM|PM/g, '').trim(),
           depth: value
+        };
+      });
+    };
+
+    this.updateChartBySeries = ({dataSeriesExpected, dataSeriesMitigation}) => {
+      depthChart.data.datasets.at(0).data = dataSeriesToChartData(dataSeriesExpected);
+      depthChart.data.datasets.at(1).data = dataSeriesToChartData(dataSeriesMitigation);
+      depthChart.update();
+    };
+
+    const dataSeriesToChartData = (dataSeries) => {
+      return dataSeries.map(({multidimensionalDefinition, value}) => {
+        return {
+          time: minuteFormatter.format(new Date(multidimensionalDefinition.at(0).values.at(0))).replace(/AM|PM/g, '').trim(),
+          depth: value.at(0)
         };
       });
     };
@@ -482,13 +484,15 @@ class Application extends AppBase {
 
             locationGraphic.geometry = mapPoint;
 
-            /*getFloodDepths({location: mapPoint}).then(({dataSeriesExpected, dataSeriesMitigation}) => {
-             this.updateChart({dataSeriesExpected, dataSeriesMitigation});
-             }).catch(handleAbortError);*/
-
-            getFloodDepths({location: mapPoint}).then(({expectedValues, mitigationValues}) => {
-              this.updateChart({expectedValues, mitigationValues});
-            }).catch(handleAbortError);
+            if (this.imageryLayerType === 'imagery') {
+              getFloodDepthsByValues({location: mapPoint}).then(({expectedValues, mitigationValues}) => {
+                this.updateChartByValues({expectedValues, mitigationValues});
+              }).catch(handleAbortError);
+            } else {
+              getFloodDepthsBySeries({location: mapPoint}).then(({dataSeriesExpected, dataSeriesMitigation}) => {
+                this.updateChartBySeries({dataSeriesExpected, dataSeriesMitigation});
+              }).catch(handleAbortError);
+            }
 
           }
         });
@@ -497,15 +501,18 @@ class Application extends AppBase {
 
         const slices = this.dates.map(d => d.valueOf());
 
-        const getFloodDepths = promiseUtils.debounce(({location}) => {
+        /**
+         *
+         */
+        const getFloodDepthsByValues = promiseUtils.debounce(({location}) => {
 
           const identifyParameters = {
             geometry: location,
             mosaicRule: {
               multidimensionalDefinition: [
                 {
-                  variableName: "B1",
-                  dimensionName: "StdTime",
+                  variableName: this.depthVariableName,
+                  dimensionName: this.timeDimensionName,
                   values: [slices],
                   isSlice: true
                 }
@@ -518,20 +525,22 @@ class Application extends AppBase {
             depthLayerExpected.identify(identifyParameters),
             depthLayerMitigation.identify(identifyParameters)
           ]).then(([expectedResults, mitigationResults]) => {
-
             const expectedValues = expectedResults.value.split(';').map(Number);
             const mitigationValues = mitigationResults.value.split(';').map(Number);
-
             return {expectedValues, mitigationValues};
           });
+        });
 
-          /*return Promise.all([
-           depthLayerExpected.identify(location, {transposedVariableName: 'Depth'}),
-           depthLayerMitigation.identify(location, {transposedVariableName: 'Depth'})
-           ]).then(([{dataSeries: dataSeriesExpected}, {dataSeries: dataSeriesMitigation}]) => {
-           return {dataSeriesExpected, dataSeriesMitigation};
-           });*/
-
+        /**
+         *
+         */
+        const getFloodDepthsBySeries = promiseUtils.debounce(({location}) => {
+          return Promise.all([
+            depthLayerExpected.identify(location, {transposedVariableName: this.depthVariableName}),
+            depthLayerMitigation.identify(location, {transposedVariableName: this.depthVariableName})
+          ]).then(([{dataSeries: dataSeriesExpected}, {dataSeries: dataSeriesMitigation}]) => {
+            return {dataSeriesExpected, dataSeriesMitigation};
+          });
         });
 
       });
