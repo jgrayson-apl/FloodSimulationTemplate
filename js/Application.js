@@ -147,10 +147,9 @@ class Application extends AppBase {
           const bookmarksExpand = new Expand({
             content: new Bookmarks({view: view}),
             autoCollapse: true,
-            placement:'bottom-end'
-          })
-          view.ui.add(bookmarksExpand, 'top-right')
-
+            placement: 'bottom-end'
+          });
+          view.ui.add(bookmarksExpand, 'top-right');
 
           resolve();
         });
@@ -207,9 +206,9 @@ class Application extends AppBase {
         const analysisLayers = {expectedLayer, mitigationLayer, flowLayerExpected, depthLayerExpected, flowLayerMitigation, depthLayerMitigation};
 
         const {serviceRasterInfo} = depthLayerExpected;
-        const dates = serviceRasterInfo.multidimensionalInfo.variables.at(0).dimensions.at(0).values.map(val => new Date(val));
+        this.dates = serviceRasterInfo.multidimensionalInfo.variables.at(0).dimensions.at(0).values.map(val => new Date(val));
 
-        resolve({analysisLayers, dates});
+        resolve({analysisLayers, dates: this.dates});
       });
 
     });
@@ -242,20 +241,25 @@ class Application extends AppBase {
           timeVisible: true,
           fullTimeExtent: {start: dates.at(0), end: dates.at(-1)},
           timeExtent: {start: initialDate, end: initialDate},
-          stops: {dates},
-          tickConfigs: [
-            {
-              mode: 'position',
-              values: dates.map(date => date.valueOf()),
-              labelsVisible: true,
-              labelFormatFunction: (value, type, index) => {
-                switch (type) {
-                  case 'tick':
-                    return minuteFormatter.format(value).replace(/AM|PM/g, '').trim();
-                }
-              }
+          stops: {
+            interval: {
+              value: 1,
+              unit: 'minutes'
             }
-          ],
+          },
+          /*tickConfigs: [
+           {
+           mode: 'position',
+           values: dates.map(date => date.valueOf()),
+           labelsVisible: true,
+           labelFormatFunction: (value, type, index) => {
+           switch (type) {
+           case 'tick':
+           return minuteFormatter.format(value).replace(/AM|PM/g, '').trim();
+           }
+           }
+           }
+           ],*/
           labelFormatFunction: (value, type, element) => {
             switch (type) {
               case "min":
@@ -297,7 +301,7 @@ class Application extends AppBase {
             borderColor: 'rgba(54,162,235,0.8)',
             pointBorderColor: '#efefef',
             pointBackgroundColor: 'transparent',
-            pointRadius: 4.5,
+            pointRadius: 3.0,
             pointHoverRadius: 7.5,
             pointBorderWidth: 1.5,
             pointHoverBackgroundColor: 'rgba(54,162,235,0.8)',
@@ -309,7 +313,7 @@ class Application extends AppBase {
             borderColor: 'rgba(254,88,62,0.8)',
             pointBorderColor: '#efefef',
             pointBackgroundColor: 'transparent',
-            pointRadius: 4.5,
+            pointRadius: 3.0,
             pointHoverRadius: 7.5,
             pointBorderWidth: 1.5,
             pointHoverBackgroundColor: 'rgba(254,88,62,0.8)',
@@ -343,18 +347,18 @@ class Application extends AppBase {
             borderColor: '#efefef',
             borderWidth: 1,
             callbacks: {
-              title(items) {
+              title: (items) => {
                 //console.info(items);
                 const diff = (items.at(1).parsed.y - items.at(0).parsed.y);
                 const type = (diff < 0) ? 'LESS' : ((diff > 0) ? 'MORE' : '');
                 return [
-                  type ? `CHANGE: ${ Math.abs(diff).toFixed(2) } FT ${ type } WATER` : 'NO CHANGE'
+                  type ? `CHANGE: ${ Math.abs(diff).toFixed(3) } ${ this.depthUnit.label.toUpperCase() } ${ type } WATER` : 'NO CHANGE'
                 ];
               },
-              label(context) {
+              label: (context) => {
                 const data = context.dataset.data[context.dataIndex];
                 const label = context.dataset.label;
-                return `${ label } Depth: ${ data.depth.toFixed(2) } ft`;
+                return `${ label } Depth: ${ data.depth.toFixed(3) } ${ this.depthUnit.label }`;
               }
             }
           }
@@ -372,14 +376,14 @@ class Application extends AppBase {
           y: {
             title: {
               display: true,
-              text: 'Water Depth ( feet )'
+              text: `Water Depth ( ${ this.depthUnit.name } )`
             },
             grid: {
               color: '#666666'
             },
             ticks: {
-              callback: function (value, index, ticks) {
-                return `${ value.toFixed(2) } ft`;
+              callback: (value, index, ticks) => {
+                return `${ value.toFixed(3) } ${ this.depthUnit.label }`;
               }
             }
           }
@@ -393,17 +397,32 @@ class Application extends AppBase {
       depthChart.update();
     };
 
-    this.updateChart = ({dataSeriesExpected, dataSeriesMitigation}) => {
-      depthChart.data.datasets.at(0).data = dataSeriesToChartData(dataSeriesExpected);
-      depthChart.data.datasets.at(1).data = dataSeriesToChartData(dataSeriesMitigation);
+    this.updateChart = ({expectedValues, mitigationValues}) => {
+      depthChart.data.datasets.at(0).data = dataValuesToChartData(expectedValues);
+      depthChart.data.datasets.at(1).data = dataValuesToChartData(mitigationValues);
       depthChart.update();
     };
 
-    const dataSeriesToChartData = (dataSeries) => {
-      return dataSeries.map(({multidimensionalDefinition, value}) => {
+    /*this.updateChart = ({dataSeriesExpected, dataSeriesMitigation}) => {
+     depthChart.data.datasets.at(0).data = dataSeriesToChartData(dataSeriesExpected);
+     depthChart.data.datasets.at(1).data = dataSeriesToChartData(dataSeriesMitigation);
+     depthChart.update();
+     };*/
+
+    /*const dataSeriesToChartData = (dataSeries) => {
+     return dataSeries.map(({multidimensionalDefinition, value}) => {
+     return {
+     time: minuteFormatter.format(new Date(multidimensionalDefinition.at(0).values.at(0))).replace(/AM|PM/g, '').trim(),
+     depth: value.at(0)
+     };
+     });
+     };*/
+
+    const dataValuesToChartData = (dataValues) => {
+      return dataValues.map((value, valueIdx) => {
         return {
-          time: minuteFormatter.format(new Date(multidimensionalDefinition.at(0).values.at(0))).replace(/AM|PM/g, '').trim(),
-          depth: value.at(0)
+          time: minuteFormatter.format(this.dates.at(valueIdx)).replace(/AM|PM/g, '').trim(),
+          depth: value
         };
       });
     };
@@ -463,8 +482,12 @@ class Application extends AppBase {
 
             locationGraphic.geometry = mapPoint;
 
-            getFloodDepths({location: mapPoint}).then(({dataSeriesExpected, dataSeriesMitigation}) => {
-              this.updateChart({dataSeriesExpected, dataSeriesMitigation});
+            /*getFloodDepths({location: mapPoint}).then(({dataSeriesExpected, dataSeriesMitigation}) => {
+             this.updateChart({dataSeriesExpected, dataSeriesMitigation});
+             }).catch(handleAbortError);*/
+
+            getFloodDepths({location: mapPoint}).then(({expectedValues, mitigationValues}) => {
+              this.updateChart({expectedValues, mitigationValues});
             }).catch(handleAbortError);
 
           }
@@ -472,13 +495,43 @@ class Application extends AppBase {
 
         const handleAbortError = error => !promiseUtils.isAbortError(error) && console.error(error);
 
+        const slices = this.dates.map(d => d.valueOf());
+
         const getFloodDepths = promiseUtils.debounce(({location}) => {
+
+          const identifyParameters = {
+            geometry: location,
+            mosaicRule: {
+              multidimensionalDefinition: [
+                {
+                  variableName: "B1",
+                  dimensionName: "StdTime",
+                  values: [slices],
+                  isSlice: true
+                }
+              ]
+            },
+            processAsMultidimensional: true
+          };
+
           return Promise.all([
-            depthLayerExpected.identify(location, {transposedVariableName: 'Depth'}),
-            depthLayerMitigation.identify(location, {transposedVariableName: 'Depth'})
-          ]).then(([{dataSeries: dataSeriesExpected}, {dataSeries: dataSeriesMitigation}]) => {
-            return {dataSeriesExpected, dataSeriesMitigation};
+            depthLayerExpected.identify(identifyParameters),
+            depthLayerMitigation.identify(identifyParameters)
+          ]).then(([expectedResults, mitigationResults]) => {
+
+            const expectedValues = expectedResults.value.split(';').map(Number);
+            const mitigationValues = mitigationResults.value.split(';').map(Number);
+
+            return {expectedValues, mitigationValues};
           });
+
+          /*return Promise.all([
+           depthLayerExpected.identify(location, {transposedVariableName: 'Depth'}),
+           depthLayerMitigation.identify(location, {transposedVariableName: 'Depth'})
+           ]).then(([{dataSeries: dataSeriesExpected}, {dataSeries: dataSeriesMitigation}]) => {
+           return {dataSeriesExpected, dataSeriesMitigation};
+           });*/
+
         });
 
       });
